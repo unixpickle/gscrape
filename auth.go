@@ -22,10 +22,9 @@ func NewSession() *Session {
 	return &Session{http.Client{Jar: jar}}
 }
 
-// Authenticate attempts to access a given URL, then enters the
-// given email and password into the login page to which the URL
-// redirects.
-func (s *Session) Authenticate(serviceURL, email, password string) error {
+// Auth attempts to access a given URL, then enters the given
+// credentials when the URL redirects to a login page.
+func (s *Session) Auth(serviceURL, email, password string) error {
 	resp, err := s.Get(serviceURL)
 	if err != nil {
 		return err
