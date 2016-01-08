@@ -2,7 +2,6 @@ package gscrape
 
 import (
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -14,7 +13,7 @@ import (
 
 // A Session facilitates a connection to an authenticated Google service.
 type Session struct {
-	client http.Client
+	http.Client
 }
 
 // NewSession creates a fresh, unauthenticated session.
@@ -27,7 +26,7 @@ func NewSession() *Session {
 // given email and password into the login page to which the URL
 // redirects.
 func (s *Session) Authenticate(serviceURL, email, password string) error {
-	resp, err := s.client.Get(serviceURL)
+	resp, err := s.Get(serviceURL)
 	if err != nil {
 		return err
 	}
@@ -48,7 +47,7 @@ func (s *Session) Authenticate(serviceURL, email, password string) error {
 	submission["Email"] = []string{email}
 	submission["Passwd"] = []string{password}
 
-	postResp, err := s.client.PostForm(resp.Request.URL.String(), submission)
+	postResp, err := s.PostForm(resp.Request.URL.String(), submission)
 	if err != nil {
 		return err
 	}
@@ -59,16 +58,6 @@ func (s *Session) Authenticate(serviceURL, email, password string) error {
 	}
 
 	return nil
-}
-
-// GetPage fetches the contents of a (presumably authenticated) page.
-func (s *Session) GetPage(url string) ([]byte, error) {
-	resp, err := s.client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
 }
 
 func getAttribute(n *html.Node, name string) string {
