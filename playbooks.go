@@ -35,8 +35,15 @@ var AllBookSources = []BookSource{
 }
 
 type BookInfo struct {
-	Title   string   `json:"title"`
-	Authors []string `json:"authors"`
+	Title       string   `json:"title"`
+	Authors     []string `json:"authors"`
+	Publisher   string   `json:"publisher"`
+	Description string   `json:"description"`
+	PageCount   int      `json:"pageCount"`
+	ImageLinks  struct {
+		Thumbnail      string `json:"thumbnail"`
+		SmallThumbnail string `json:"smallThumbnail"`
+	} `json:"imageLinks"`
 }
 
 // AuthPlayBooks is a wrapper for Authenticate() that uses Google Play Books.
