@@ -1,12 +1,16 @@
 package gscrape
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 var niceUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:40.0) Gecko/20100101 " +
@@ -46,17 +50,16 @@ type BookInfo struct {
 	} `json:"imageLinks"`
 }
 
-// AuthPlayBooks is a wrapper for Authenticate() that uses Google Play Books.
-func (s *Session) AuthPlayBooks(email, password string) error {
-	return s.Auth("https://play.google.com/books", email, password)
-}
-
 type PlayBooks struct {
 	s    *Session
 	info playBooksAuthInfo
 }
 
-func NewPlayBooks(s *Session) (*PlayBooks, error) {
+// AuthPlayBooks is a wrapper for Authenticate() that uses Google Play Books.
+func (s *Session) AuthPlayBooks(email, password string) (*PlayBooks, error) {
+	if err := s.Auth("https://play.google.com/books", email, password); err != nil {
+		return nil, err
+	}
 	info, err := s.getPlayBooksAuthInfo()
 	if err != nil {
 		return nil, err
@@ -144,6 +147,130 @@ func (p *PlayBooks) MyBooks(sources []BookSource) (<-chan BookInfo, <-chan error
 	}()
 
 	return bookChan, errChan
+}
+
+// Upload adds an E-book to your Play Books library.
+// You must specify the size of the book manually, since
+// it must be sent to the server before the actual data.
+func (p *PlayBooks) Upload(data io.Reader, size int64, filename, title string) error {
+	encoded, _ := json.Marshal(map[string]interface{}{
+		"protocolVersion": "0.8",
+		"createSessionRequest": map[string]interface{}{
+			"fields": []interface{}{
+				map[string]interface{}{
+					"external": map[string]interface{}{
+						"name":     "file",
+						"filename": filename,
+						"put":      map[string]interface{}{},
+						"size":     size,
+					},
+				},
+				map[string]interface{}{
+					"inlined": map[string]interface{}{
+						"name":        "title",
+						"contentType": "text/plain",
+						"content":     title,
+					},
+				},
+				map[string]interface{}{
+					"inlined": map[string]interface{}{
+						"name":        "addtime",
+						"contentType": "text/plain",
+						"content":     strconv.FormatInt(time.Now().UnixNano()/1000000, 10),
+					},
+				},
+			},
+		},
+	})
+	postBody := bytes.NewBuffer(encoded)
+	resp, err := p.s.Post("https://docs.google.com/upload/books/library/upload?authuser=0",
+		"application/json", postBody)
+	if err != nil {
+		return err
+	}
+	contents, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	var startUploadResponse struct {
+		SessionStatus struct {
+			Transfers []struct {
+				PutInfo struct {
+					URL string `json:"url"`
+				} `json:"putInfo"`
+			} `json:"externalFieldTransfers"`
+		} `json:"sessionStatus"`
+	}
+	if err := json.Unmarshal(contents, &startUploadResponse); err != nil {
+		return err
+	} else if len(startUploadResponse.SessionStatus.Transfers) != 1 {
+		return errors.New("unexpected number of transfers")
+	}
+
+	uploadURL := startUploadResponse.SessionStatus.Transfers[0].PutInfo.URL
+	req, err := http.NewRequest("POST", uploadURL, data)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-GUploader-No-308", "yes")
+	req.Header.Set("X-HTTP-Method-Override", "put")
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err = p.s.Do(req)
+	if err != nil {
+		return err
+	}
+	contents, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return err
+	}
+
+	var uploadResponse struct {
+		SessionStatus struct {
+			State      string `json:"state"`
+			Additional struct {
+				Info struct {
+					Info struct {
+						Info struct {
+							ContentID string `json:"contentId"`
+						} `json:"customerSpecificInfo"`
+					} `json:"completionInfo"`
+				} `json:"uploader_service.GoogleRupioAdditionalInfo"`
+			} `json:"additionalInfo"`
+		} `json:"sessionStatus"`
+	}
+	if err := json.Unmarshal(contents, &uploadResponse); err != nil {
+		return err
+	} else if uploadResponse.SessionStatus.State != "FINALIZED" {
+		return errors.New("upload is not finalized")
+	}
+
+	contentID := uploadResponse.SessionStatus.Additional.Info.Info.Info.ContentID
+	addBookArgs := url.Values{}
+	addBookArgs.Set("upload_client_token", contentID)
+	addBookArgs.Set("key", p.info.requestKey)
+	addBookArgs.Set("source", "ge-books-fe")
+	addBookURL := "https://clients6.google.com/books/v1/cloudloading/addBook?" +
+		addBookArgs.Encode()
+	req, _ = http.NewRequest("POST", addBookURL, nil)
+	req.Header.Add("OriginToken", p.info.originToken)
+	req.Header.Add("X-Origin", "https://play.google.com")
+	resp, err = p.s.Do(req)
+	if err != nil {
+		return err
+	}
+	contents, err = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	var addBookResponse map[string]interface{}
+	if err := json.Unmarshal(contents, &addBookResponse); err != nil {
+		return err
+	}
+	if _, ok := addBookResponse["error"]; ok {
+		return errors.New("addBook API failed")
+	}
+	return nil
 }
 
 // playBooksAuthInfo stores extra authentication information needed
