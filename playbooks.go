@@ -48,6 +48,11 @@ type BookInfo struct {
 		Thumbnail      string `json:"thumbnail"`
 		SmallThumbnail string `json:"smallThumbnail"`
 	} `json:"imageLinks"`
+
+	// UpdateTimestamp is the last time this book was "updated", which pretty much
+	// means opened.
+	// This is a UNIX timestamp measured in seconds.
+	UpdateTimestamp int64 `json:"updateTime"`
 }
 
 type PlayBooks struct {
@@ -67,8 +72,13 @@ func (s *Session) AuthPlayBooks(email, password string) (*PlayBooks, error) {
 	return &PlayBooks{s, *info}, nil
 }
 
+type userInfo struct {
+	Updated string `json:"updated"`
+}
+
 type volumeObject struct {
 	VolumeInfo BookInfo `json:"volumeInfo"`
+	UserInfo   userInfo `json:"userInfo"`
 }
 
 type booksResponse struct {
@@ -137,7 +147,12 @@ func (p *PlayBooks) MyBooks(sources []BookSource) (<-chan BookInfo, <-chan error
 				return
 			}
 			for _, volume := range fullResponse.Items {
-				bookChan <- volume.VolumeInfo
+				info := volume.VolumeInfo
+				if volume.UserInfo.Updated != "" {
+					updateDate, _ := time.Parse(time.RFC3339, volume.UserInfo.Updated)
+					info.UpdateTimestamp = updateDate.Unix()
+				}
+				bookChan <- info
 			}
 			i += len(fullResponse.Items)
 			if i >= fullResponse.TotalItems {
