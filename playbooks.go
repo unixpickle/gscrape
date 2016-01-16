@@ -53,6 +53,9 @@ type BookInfo struct {
 	// means opened.
 	// This is a UNIX timestamp measured in seconds.
 	UpdateTimestamp int64 `json:"updateTime"`
+
+	ID       string `json:"id"`
+	Uploaded bool   `json:"uploaded"`
 }
 
 type PlayBooks struct {
@@ -73,10 +76,12 @@ func (s *Session) AuthPlayBooks(email, password string) (*PlayBooks, error) {
 }
 
 type userInfo struct {
-	Updated string `json:"updated"`
+	Updated  string `json:"updated"`
+	Uploaded bool   `json:"isUploaded"`
 }
 
 type volumeObject struct {
+	ID         string   `json:"id"`
 	VolumeInfo BookInfo `json:"volumeInfo"`
 	UserInfo   userInfo `json:"userInfo"`
 }
@@ -152,6 +157,8 @@ func (p *PlayBooks) MyBooks(sources []BookSource) (<-chan BookInfo, <-chan error
 					updateDate, _ := time.Parse(time.RFC3339, volume.UserInfo.Updated)
 					info.UpdateTimestamp = updateDate.Unix()
 				}
+				info.ID = volume.ID
+				info.Uploaded = volume.UserInfo.Uploaded
 				bookChan <- info
 			}
 			i += len(fullResponse.Items)
