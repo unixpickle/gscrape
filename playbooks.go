@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-var niceUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:40.0) Gecko/20100101 " +
-	"Firefox/40.0"
-
 type BookSource int
 
 const (
