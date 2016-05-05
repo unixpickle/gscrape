@@ -11,6 +11,11 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+const (
+	niceUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:40.0) Gecko/20100101 " +
+		"Firefox/40.0"
+)
+
 // A Session facilitates a connection to an authenticated Google service.
 type Session struct {
 	http.Client
@@ -56,6 +61,15 @@ func (s *Session) Auth(serviceURL, email, password string) error {
 		return errors.New("login incorrect")
 	}
 
+	return nil
+}
+
+func (s *Session) Logout() error {
+	resp, err := s.Get("https://accounts.google.com/Logout")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 	return nil
 }
 
