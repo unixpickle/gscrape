@@ -59,6 +59,14 @@ func (s *Session) Auth(serviceURL, email, password string) error {
 	return nil
 }
 
+func (s *Session) Logout() error {
+	resp, err := s.Get("https://accounts.google.com/Logout")
+	if resp != nil {
+		resp.Body.Close()
+	}
+	return err
+}
+
 func getAttribute(n *html.Node, name string) string {
 	for _, a := range n.Attr {
 		if a.Key == name {
