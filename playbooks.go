@@ -13,9 +13,6 @@ import (
 	"time"
 )
 
-var niceUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:40.0) Gecko/20100101 " +
-	"Firefox/40.0"
-
 type BookSource int
 
 const (
@@ -306,7 +303,7 @@ func (s *Session) getPlayBooksAuthInfo() (*playBooksAuthInfo, error) {
 	req, _ := http.NewRequest("GET", "https://play.google.com/books", nil)
 
 	// Setting a user-agent is necessary; otherwise we do not get the expected JS.
-	req.Header.Set("User-Agent", niceUserAgent)
+	req.Header.Set("User-Agent", spoofedUserAgent)
 	resp, err := s.Do(req)
 	if err != nil {
 		return nil, err

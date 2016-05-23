@@ -11,6 +11,11 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// spoofedUserAgent is necessary in order to get some
+// Google websites to give us a usable response.
+var spoofedUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:40.0) Gecko/20100101 " +
+	"Firefox/40.0"
+
 // A Session facilitates a connection to an authenticated Google service.
 type Session struct {
 	http.Client
