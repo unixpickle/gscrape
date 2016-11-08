@@ -144,6 +144,10 @@ func (p *PlayBooks) MyBooks(sources []BookSource) (<-chan BookInfo, <-chan error
 			}
 			contents, err := ioutil.ReadAll(resp.Body)
 			resp.Body.Close()
+			if err != nil {
+				errChan <- err
+				return
+			}
 			var fullResponse booksResponse
 			if err := json.Unmarshal(contents, &fullResponse); err != nil {
 				errChan <- err
@@ -283,6 +287,9 @@ func (p *PlayBooks) Upload(data io.Reader, size int64, filename, title string) e
 	}
 	contents, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
+	if err != nil {
+		return err
+	}
 	var addBookResponse map[string]interface{}
 	if err := json.Unmarshal(contents, &addBookResponse); err != nil {
 		return err
