@@ -42,8 +42,8 @@ type Youtube struct {
 // a session and returns a Youtube instance for
 // using the youtube-related features of the session.
 func (s *Session) AuthYoutube(email, password string) (*Youtube, error) {
-	err := s.Auth("https://accounts.google.com/ServiceLogin?service=youtube", email, password)
-	if err != nil {
+	if err := s.Auth("https://accounts.google.com/ServiceLogin?service=youtube",
+		"https://accounts.google.com/ServiceLoginAuth", email, password); err != nil {
 		return nil, err
 	}
 
