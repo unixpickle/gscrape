@@ -29,7 +29,7 @@ func NewSession() *Session {
 
 // Auth attempts to access a given URL, then enters the given
 // credentials when the URL redirects to a login page.
-func (s *Session) Auth(serviceURL, email, password string) error {
+func (s *Session) Auth(serviceURL, authURL, email, password string) error {
 	resp, err := s.Get(serviceURL)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (s *Session) Auth(serviceURL, email, password string) error {
 	submission["Email"] = []string{email}
 	submission["Passwd"] = []string{password}
 
-	postResp, err := s.PostForm(resp.Request.URL.String(), submission)
+	postResp, err := s.PostForm(authURL, submission)
 	if err != nil {
 		return err
 	}

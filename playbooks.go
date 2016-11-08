@@ -62,7 +62,8 @@ type PlayBooks struct {
 
 // AuthPlayBooks is a wrapper for Authenticate() that uses Google Play Books.
 func (s *Session) AuthPlayBooks(email, password string) (*PlayBooks, error) {
-	if err := s.Auth("https://play.google.com/books", email, password); err != nil {
+	if err := s.Auth("https://play.google.com/books",
+		"https://play.google.com/books", email, password); err != nil {
 		return nil, err
 	}
 	info, err := s.getPlayBooksAuthInfo()
