@@ -180,7 +180,11 @@ func parseVideoInfo(element *html.Node) *YoutubeVideoInfo {
 	if ok {
 		thumbnailImage, ok := scrape.Find(thumbnailContainer, scrape.ByTag(atom.Img))
 		if ok {
-			info.ThumbnailURL, _ = url.Parse(scrape.Attr(thumbnailImage, "src"))
+			thumb := scrape.Attr(thumbnailImage, "data-thumb")
+			if thumb == "" {
+				thumb = scrape.Attr(thumbnailImage, "src")
+			}
+			info.ThumbnailURL, _ = url.Parse(thumb)
 		}
 	}
 
